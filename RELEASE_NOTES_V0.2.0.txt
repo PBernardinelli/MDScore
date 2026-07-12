@@ -1,0 +1,15 @@
+MD Score V0.2.0
+
+Included:
+- Refined dark theme
+- Navigable Home screen
+- New Game setup (2 to 8 players)
+- Player name entry
+- Initial functional Score screen
+- Round save and automatic total update
+- History placeholder
+- Settings screen
+- Small Don Minó presence in the interface
+
+Test path:
+Home > New Game > choose player count > Continue > edit names > Start Game > enter every round value > Save Round
