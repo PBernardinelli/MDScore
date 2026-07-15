@@ -1,3 +1,8 @@
+// MD Score
+// Version: V0.31
+// File: score_screen.dart
+// Date: 2026-07-15
+
 import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
@@ -18,35 +23,67 @@ class ScoreScreen extends StatefulWidget {
 
 class _ScoreScreenState extends State<ScoreScreen> {
   int _round = 12;
+  int? _activePlayerIndex;
   bool _gameFinished = false;
 
   late final List<int> _totals;
   late List<TextEditingController> _roundControllers;
+  late List<FocusNode> _focusNodes;
 
   @override
   void initState() {
     super.initState();
     _totals = List.filled(widget.playerNames.length, 0);
-    _roundControllers = _newControllers();
+    _createRoundInputs();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _focusNodes.isNotEmpty) {
+        _focusNodes.first.requestFocus();
+      }
+    });
   }
 
-  List<TextEditingController> _newControllers() {
-    return List.generate(
+  void _createRoundInputs() {
+    _roundControllers = List.generate(
       widget.playerNames.length,
       (_) => TextEditingController(),
     );
+
+    _focusNodes = List.generate(widget.playerNames.length, (index) {
+      final node = FocusNode();
+      node.addListener(() {
+        if (!mounted) return;
+        if (node.hasFocus) {
+          setState(() => _activePlayerIndex = index);
+        } else if (_activePlayerIndex == index) {
+          setState(() => _activePlayerIndex = null);
+        }
+      });
+      return node;
+    });
   }
 
-  void _disposeControllers() {
+  void _disposeRoundInputs() {
     for (final controller in _roundControllers) {
       controller.dispose();
+    }
+    for (final node in _focusNodes) {
+      node.dispose();
     }
   }
 
   @override
   void dispose() {
-    _disposeControllers();
+    _disposeRoundInputs();
     super.dispose();
+  }
+
+  void _goToNextPlayer(int index) {
+    if (index < _focusNodes.length - 1) {
+      _focusNodes[index + 1].requestFocus();
+    } else {
+      _saveRound();
+    }
   }
 
   void _saveRound() {
@@ -54,12 +91,15 @@ class _ScoreScreenState extends State<ScoreScreen> {
 
     final values = <int>[];
 
-    for (final controller in _roundControllers) {
-      final value = int.tryParse(controller.text.trim());
+    for (var index = 0; index < _roundControllers.length; index++) {
+      final value = int.tryParse(_roundControllers[index].text.trim());
       if (value == null || value < 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enter every score before saving.')),
+          SnackBar(
+            content: Text('Enter the score for ${widget.playerNames[index]}.'),
+          ),
         );
+        _focusNodes[index].requestFocus();
         return;
       }
       values.add(value);
@@ -72,20 +112,30 @@ class _ScoreScreenState extends State<ScoreScreen> {
         _totals[index] += values[index];
       }
 
-      _disposeControllers();
+      _disposeRoundInputs();
+      _activePlayerIndex = null;
 
       if (_round == 0) {
         _roundControllers = <TextEditingController>[];
+        _focusNodes = <FocusNode>[];
         _gameFinished = true;
       } else {
         _round--;
-        _roundControllers = _newControllers();
+        _createRoundInputs();
       }
     });
 
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('Round $savedRound saved.')));
+
+    if (!_gameFinished) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _focusNodes.isNotEmpty) {
+          _focusNodes.first.requestFocus();
+        }
+      });
+    }
   }
 
   List<int> get _rankingIndexes {
@@ -149,47 +199,62 @@ class _ScoreScreenState extends State<ScoreScreen> {
                     rankingIndexes: _rankingIndexes,
                     winnerIndexes: _winnerIndexes,
                   )
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Round $_round',
-                              style: Theme.of(context).textTheme.headlineLarge,
-                            ),
-                          ),
-                          Text(
-                            '${13 - _round} of 13',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const _ScoreHeader(),
-                      const SizedBox(height: 8),
-                      ...List.generate(widget.playerNames.length, (index) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _ScoreRow(
-                            playerName: widget.playerNames[index],
-                            total: _totals[index],
-                            controller: _roundControllers[index],
-                          ),
-                        );
-                      }),
-                      const SizedBox(height: 12),
-                      FilledButton.icon(
-                        onPressed: _saveRound,
-                        icon: const Icon(Icons.save_outlined),
-                        label: Text(_round == 0 ? 'Finish Game' : 'Save Round'),
-                      ),
-                    ],
-                  ),
+                : _buildScoreView(context),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildScoreView(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 18),
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Round $_round',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                ),
+                Text(
+                  '${13 - _round} of 13',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const _ScoreHeader(),
+            const SizedBox(height: 5),
+            ...List.generate(widget.playerNames.length, (index) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 5),
+                child: _ScoreRow(
+                  playerName: widget.playerNames[index],
+                  total: _totals[index],
+                  controller: _roundControllers[index],
+                  focusNode: _focusNodes[index],
+                  isActive: _activePlayerIndex == index,
+                  isLast: index == widget.playerNames.length - 1,
+                  onSubmitted: () => _goToNextPlayer(index),
+                ),
+              );
+            }),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 46,
+              child: FilledButton.icon(
+                onPressed: _saveRound,
+                icon: const Icon(Icons.save_outlined),
+                label: Text(_round == 0 ? 'Finish Game' : 'Save Round'),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -298,13 +363,20 @@ class _ScoreHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 14),
+    final style = Theme.of(context).textTheme.labelLarge;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
-          Expanded(flex: 5, child: Text('Player')),
-          Expanded(flex: 2, child: Text('Total', textAlign: TextAlign.center)),
-          Expanded(flex: 3, child: Text('Round', textAlign: TextAlign.center)),
+          Expanded(flex: 5, child: Text('Player', style: style)),
+          Expanded(
+            flex: 2,
+            child: Text('Total', textAlign: TextAlign.center, style: style),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text('Round', textAlign: TextAlign.center, style: style),
+          ),
         ],
       ),
     );
@@ -316,18 +388,36 @@ class _ScoreRow extends StatelessWidget {
     required this.playerName,
     required this.total,
     required this.controller,
+    required this.focusNode,
+    required this.isActive,
+    required this.isLast,
+    required this.onSubmitted,
   });
 
   final String playerName;
   final int total;
   final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool isActive;
+  final bool isLast;
+  final VoidCallback onSubmitted;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 140),
+      decoration: BoxDecoration(
+        color: isActive
+            ? AppTheme.accent.withValues(alpha: 0.10)
+            : Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isActive ? AppTheme.accent : Colors.transparent,
+          width: 1.5,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         child: Row(
           children: [
             Expanded(
@@ -352,15 +442,23 @@ class _ScoreRow extends StatelessWidget {
             ),
             Expanded(
               flex: 3,
-              child: TextField(
-                controller: controller,
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                decoration: const InputDecoration(
-                  hintText: '0',
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 10,
+              child: SizedBox(
+                height: 42,
+                child: TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  keyboardType: TextInputType.number,
+                  textInputAction: isLast
+                      ? TextInputAction.done
+                      : TextInputAction.next,
+                  textAlign: TextAlign.center,
+                  onSubmitted: (_) => onSubmitted(),
+                  decoration: const InputDecoration(
+                    hintText: '0',
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
                   ),
                 ),
               ),
