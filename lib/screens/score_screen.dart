@@ -1,9 +1,10 @@
 // MD Score
-// Version: V0.31
+// Version: V0.33
 // File: score_screen.dart
-// Date: 2026-07-15
+// Date: 2026-07-18
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/app_theme.dart';
 
@@ -25,6 +26,13 @@ class _ScoreScreenState extends State<ScoreScreen> {
   int _round = 12;
   int? _activePlayerIndex;
   bool _gameFinished = false;
+
+  int get _maximumRoundScore {
+    final playerCount = widget.playerNames.length;
+    if (playerCount <= 4) return 304;
+    if (playerCount <= 6) return 250;
+    return 212;
+  }
 
   late final List<int> _totals;
   late List<TextEditingController> _roundControllers;
@@ -78,11 +86,44 @@ class _ScoreScreenState extends State<ScoreScreen> {
     super.dispose();
   }
 
-  void _goToNextPlayer(int index) {
-    if (index < _focusNodes.length - 1) {
-      _focusNodes[index + 1].requestFocus();
-    } else {
+  void _handleScoreChanged(int index, String text) {
+    if (text.isEmpty) return;
+
+    final value = int.tryParse(text);
+    if (value == null || value <= _maximumRoundScore) return;
+
+    final controller = _roundControllers[index];
+    final maximumText = _maximumRoundScore.toString();
+
+    controller.value = TextEditingValue(
+      text: maximumText,
+      selection: TextSelection.collapsed(offset: maximumText.length),
+    );
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Maximum score for this game is $_maximumRoundScore.'),
+      ),
+    );
+  }
+
+  void _handleSubmitted(int index) {
+    final allScoresEntered = _roundControllers.every(
+      (controller) => controller.text.trim().isNotEmpty,
+    );
+
+    if (allScoresEntered) {
       _saveRound();
+      return;
+    }
+
+    for (var offset = 1; offset <= _focusNodes.length; offset++) {
+      final nextIndex = (index + offset) % _focusNodes.length;
+      if (_roundControllers[nextIndex].text.trim().isEmpty) {
+        _focusNodes[nextIndex].requestFocus();
+        return;
+      }
     }
   }
 
@@ -239,7 +280,10 @@ class _ScoreScreenState extends State<ScoreScreen> {
                   focusNode: _focusNodes[index],
                   isActive: _activePlayerIndex == index,
                   isLast: index == widget.playerNames.length - 1,
-                  onSubmitted: () => _goToNextPlayer(index),
+                  autofocus: index == 0,
+                  maximumScore: _maximumRoundScore,
+                  onChanged: (value) => _handleScoreChanged(index, value),
+                  onSubmitted: () => _handleSubmitted(index),
                 ),
               );
             }),
@@ -391,6 +435,9 @@ class _ScoreRow extends StatelessWidget {
     required this.focusNode,
     required this.isActive,
     required this.isLast,
+    required this.autofocus,
+    required this.maximumScore,
+    required this.onChanged,
     required this.onSubmitted,
   });
 
@@ -400,6 +447,9 @@ class _ScoreRow extends StatelessWidget {
   final FocusNode focusNode;
   final bool isActive;
   final bool isLast;
+  final bool autofocus;
+  final int maximumScore;
+  final ValueChanged<String> onChanged;
   final VoidCallback onSubmitted;
 
   @override
@@ -447,11 +497,26 @@ class _ScoreRow extends StatelessWidget {
                 child: TextField(
                   controller: controller,
                   focusNode: focusNode,
-                  keyboardType: TextInputType.number,
+                  autofocus: autofocus,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: false,
+                    signed: false,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(3),
+                  ],
                   textInputAction: isLast
                       ? TextInputAction.done
                       : TextInputAction.next,
                   textAlign: TextAlign.center,
+                  onTap: () {
+                    controller.selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: controller.text.length,
+                    );
+                  },
+                  onChanged: onChanged,
                   onSubmitted: (_) => onSubmitted(),
                   decoration: const InputDecoration(
                     hintText: '0',
