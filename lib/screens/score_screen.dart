@@ -37,7 +37,6 @@ class _ScoreScreenState extends State<ScoreScreen> {
   late List<TextEditingController> _roundControllers;
   late List<FocusNode> _focusNodes;
 
-  Timer? _autoSaveTimer;
   Timer? _persistTimer;
   Future<void> _storageQueue = Future<void>.value();
 
@@ -97,7 +96,6 @@ class _ScoreScreenState extends State<ScoreScreen> {
 
   @override
   void dispose() {
-    _autoSaveTimer?.cancel();
     _persistTimer?.cancel();
     _disposeRoundInputs();
     super.dispose();
@@ -138,17 +136,9 @@ class _ScoreScreenState extends State<ScoreScreen> {
 
   void _handleScoreChanged(int index, String text) {
     _scheduleCurrentGameSave();
-    _autoSaveTimer?.cancel();
-
-    if (_allScoresEntered) {
-      // The small delay allows the marker to finish typing a 2- or 3-digit score.
-      _autoSaveTimer = Timer(const Duration(milliseconds: 900), _saveRound);
-    }
   }
 
   void _handleSubmitted(int index) {
-    _autoSaveTimer?.cancel();
-
     if (_allScoresEntered) {
       _saveRound();
       return;
@@ -166,7 +156,6 @@ class _ScoreScreenState extends State<ScoreScreen> {
   Future<void> _saveRound() async {
     if (_gameFinished || _savingRound) return;
 
-    _autoSaveTimer?.cancel();
     _persistTimer?.cancel();
 
     final values = <int>[];
