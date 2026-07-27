@@ -1,18 +1,74 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_theme.dart';
+import '../models/game_state.dart';
+import '../services/game_storage.dart';
 import '../widgets/md_brand_header.dart';
 import 'history_screen.dart';
 import 'new_game_screen.dart';
+import 'score_screen.dart';
 import 'settings_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   static const routeName = '/';
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  GameState? _currentGame;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentGame();
+  }
+
+  Future<void> _loadCurrentGame() async {
+    final game = await GameStorage.loadCurrentGame();
+    if (!mounted) return;
+    setState(() {
+      _currentGame = game;
+      _loading = false;
+    });
+  }
+
+  Future<void> _openNewGame() async {
+    await Navigator.pushNamed(context, NewGameScreen.routeName);
+    await _loadCurrentGame();
+  }
+
+  Future<void> _resumeGame() async {
+    final game = await GameStorage.loadCurrentGame();
+    if (!mounted) return;
+
+    if (game == null) {
+      setState(() => _currentGame = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('There is no saved game to resume.')),
+      );
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => ScoreScreen(initialGame: game)),
+    );
+    await _loadCurrentGame();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final game = _currentGame;
+    final displayName = game == null
+        ? 'No game in progress'
+        : game.gameName.trim().isEmpty
+            ? 'Game in progress'
+            : game.gameName;
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -47,10 +103,15 @@ class HomeScreen extends StatelessWidget {
                             ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: Text(
-                                'No game in progress',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
+                              child: _loading
+                                  ? const LinearProgressIndicator()
+                                  : Text(
+                                      game == null
+                                          ? displayName
+                                          : '$displayName • Round ${game.round}',
+                                      style:
+                                          Theme.of(context).textTheme.bodyMedium,
+                                    ),
                             ),
                           ],
                         ),
@@ -60,22 +121,13 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 22),
                 FilledButton.icon(
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    NewGameScreen.routeName,
-                  ),
+                  onPressed: _openNewGame,
                   icon: const Icon(Icons.add_circle_outline_rounded),
                   label: const Text('New Game'),
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('There is no saved game to resume yet.'),
-                      ),
-                    );
-                  },
+                  onPressed: game == null || _loading ? null : _resumeGame,
                   icon: const Icon(Icons.play_arrow_rounded),
                   label: const Text('Resume Game'),
                 ),

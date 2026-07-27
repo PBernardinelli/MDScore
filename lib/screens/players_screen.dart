@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../models/game_state.dart';
+import '../services/game_storage.dart';
 import 'score_screen.dart';
 
 class PlayersScreen extends StatefulWidget {
@@ -18,6 +20,7 @@ class PlayersScreen extends StatefulWidget {
 
 class _PlayersScreenState extends State<PlayersScreen> {
   late final List<TextEditingController> _controllers;
+  bool _startingGame = false;
 
   @override
   void initState() {
@@ -36,7 +39,9 @@ class _PlayersScreenState extends State<PlayersScreen> {
     super.dispose();
   }
 
-  void _startGame() {
+  Future<void> _startGame() async {
+    if (_startingGame) return;
+
     final names = _controllers
         .map((controller) => controller.text.trim())
         .toList(growable: false);
@@ -48,14 +53,29 @@ class _PlayersScreenState extends State<PlayersScreen> {
       return;
     }
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => ScoreScreen(
-          gameName: widget.gameName,
-          playerNames: names,
-        ),
-      ),
+    setState(() => _startingGame = true);
+
+    final game = GameState.newGame(
+      gameName: widget.gameName,
+      playerNames: names,
     );
+
+    try {
+      await GameStorage.saveCurrentGame(game);
+      if (!mounted) return;
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => ScoreScreen(initialGame: game),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _startingGame = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not start the game.')),
+      );
+    }
   }
 
   @override
@@ -94,9 +114,15 @@ class _PlayersScreenState extends State<PlayersScreen> {
                 }),
                 const SizedBox(height: 12),
                 FilledButton.icon(
-                  onPressed: _startGame,
-                  icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('Start Game'),
+                  onPressed: _startingGame ? null : _startGame,
+                  icon: _startingGame
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.play_arrow_rounded),
+                  label: Text(_startingGame ? 'Starting...' : 'Start Game'),
                 ),
               ],
             ),
