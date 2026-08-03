@@ -9,6 +9,8 @@ class GameState {
     required this.currentScores,
     required this.createdAt,
     required this.updatedAt,
+    this.lastSavedRound,
+    this.lastRoundScores,
   });
 
   final String gameName;
@@ -18,6 +20,8 @@ class GameState {
   final List<String> currentScores;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int? lastSavedRound;
+  final List<int>? lastRoundScores;
 
   factory GameState.newGame({
     required String gameName,
@@ -43,6 +47,9 @@ class GameState {
     List<String>? currentScores,
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? lastSavedRound,
+    List<int>? lastRoundScores,
+    bool clearLastRound = false,
   }) {
     return GameState(
       gameName: gameName ?? this.gameName,
@@ -53,6 +60,14 @@ class GameState {
           currentScores ?? List<String>.from(this.currentScores),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      lastSavedRound:
+          clearLastRound ? null : lastSavedRound ?? this.lastSavedRound,
+      lastRoundScores: clearLastRound
+          ? null
+          : lastRoundScores ??
+              (this.lastRoundScores == null
+                  ? null
+                  : List<int>.from(this.lastRoundScores!)),
     );
   }
 
@@ -65,6 +80,8 @@ class GameState {
       'currentScores': currentScores,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'lastSavedRound': lastSavedRound,
+      'lastRoundScores': lastRoundScores,
     };
   }
 
@@ -72,6 +89,7 @@ class GameState {
     final names = List<String>.from(map['playerNames'] as List<dynamic>);
     final totals = List<int>.from(map['totals'] as List<dynamic>);
     final rawScores = map['currentScores'] as List<dynamic>?;
+    final rawLastScores = map['lastRoundScores'] as List<dynamic>?;
 
     return GameState(
       gameName: map['gameName'] as String? ?? '',
@@ -85,6 +103,9 @@ class GameState {
           DateTime.now(),
       updatedAt: DateTime.tryParse(map['updatedAt'] as String? ?? '') ??
           DateTime.now(),
+      lastSavedRound: map['lastSavedRound'] as int?,
+      lastRoundScores:
+          rawLastScores == null ? null : List<int>.from(rawLastScores),
     );
   }
 

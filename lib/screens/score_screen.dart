@@ -1,7 +1,7 @@
 // MD Score
-// Version: V0.34
+// Version: V0.35
 // File: score_screen.dart
-// Date: 2026-07-20
+// Date: 2026-07-31
 
 import 'dart:async';
 
@@ -37,6 +37,9 @@ class _ScoreScreenState extends State<ScoreScreen> {
   late List<TextEditingController> _roundControllers;
   late List<FocusNode> _focusNodes;
 
+  int? _lastSavedRound;
+  List<int>? _lastRoundScores;
+
   Timer? _persistTimer;
   Future<void> _storageQueue = Future<void>.value();
 
@@ -49,6 +52,10 @@ class _ScoreScreenState extends State<ScoreScreen> {
     _createdAt = game.createdAt;
     _round = game.round;
     _totals = List<int>.from(game.totals);
+    _lastSavedRound = game.lastSavedRound;
+    _lastRoundScores = game.lastRoundScores == null
+        ? null
+        : List<int>.from(game.lastRoundScores!);
     _createRoundInputs(initialScores: game.currentScores);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -112,6 +119,10 @@ class _ScoreScreenState extends State<ScoreScreen> {
           .toList(growable: false),
       createdAt: _createdAt,
       updatedAt: DateTime.now(),
+      lastSavedRound: _lastSavedRound,
+      lastRoundScores: _lastRoundScores == null
+          ? null
+          : List<int>.from(_lastRoundScores!),
     );
   }
 
@@ -132,6 +143,13 @@ class _ScoreScreenState extends State<ScoreScreen> {
     return _roundControllers.every(
       (controller) => controller.text.trim().isNotEmpty,
     );
+  }
+
+  bool get _canUndoLastRound {
+    return !_savingRound &&
+        _lastSavedRound != null &&
+        _lastRoundScores != null &&
+        _lastRoundScores!.length == _playerNames.length;
   }
 
   void _handleScoreChanged(int index, String text) {
@@ -179,6 +197,9 @@ class _ScoreScreenState extends State<ScoreScreen> {
     final finishesGame = _round == 0;
 
     setState(() {
+      _lastSavedRound = savedRound;
+      _lastRoundScores = List<int>.from(values);
+
       for (var index = 0; index < values.length; index++) {
         _totals[index] += values[index];
       }
@@ -218,6 +239,87 @@ class _ScoreScreenState extends State<ScoreScreen> {
         }
       });
     }
+  }
+
+  Future<void> _confirmUndoLastRound() async {
+    if (!_canUndoLastRound) return;
+
+    final roundToUndo = _lastSavedRound!;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Undo Last Round'),
+          content: Text(
+            'Do you want to undo round $roundToUndo?\n\n'
+            'The saved scores will be restored for editing.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Undo'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _undoLastRound();
+    }
+  }
+
+  Future<void> _undoLastRound() async {
+    if (!_canUndoLastRound) return;
+
+    _persistTimer?.cancel();
+
+    final restoredRound = _lastSavedRound!;
+    final restoredScores = List<int>.from(_lastRoundScores!);
+
+    setState(() => _savingRound = true);
+
+    setState(() {
+      for (var index = 0; index < restoredScores.length; index++) {
+        _totals[index] -= restoredScores[index];
+        if (_totals[index] < 0) {
+          _totals[index] = 0;
+        }
+      }
+
+      _disposeRoundInputs();
+      _round = restoredRound;
+      _activePlayerIndex = null;
+      _lastSavedRound = null;
+      _lastRoundScores = null;
+
+      _createRoundInputs(
+        initialScores: restoredScores.map((value) => '$value').toList(),
+      );
+    });
+
+    final game = _currentGameState();
+    _queueStorage(() => GameStorage.saveCurrentGame(game));
+
+    if (!mounted) return;
+
+    setState(() => _savingRound = false);
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Round $restoredRound restored for editing.')),
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _focusNodes.isNotEmpty) {
+        _focusNodes.first.requestFocus();
+      }
+    });
   }
 
   List<int> get _rankingIndexes {
@@ -319,6 +421,15 @@ class _ScoreScreenState extends State<ScoreScreen> {
             ),
           );
         }),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 44,
+          child: OutlinedButton.icon(
+            onPressed: _canUndoLastRound ? _confirmUndoLastRound : null,
+            icon: const Icon(Icons.undo_rounded),
+            label: const Text('Undo Last Round'),
+          ),
+        ),
         const SizedBox(height: 8),
         SizedBox(
           height: 46,
