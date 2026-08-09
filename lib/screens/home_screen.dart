@@ -38,6 +38,38 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openNewGame() async {
+    if (_currentGame != null) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Game in progress'),
+            content: const Text(
+              'A game is already in progress.\n\n'
+              'Starting a new game will discard the current game.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Start New Game'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (confirmed != true) return;
+
+      await GameStorage.clearCurrentGame();
+      if (!mounted) return;
+
+      setState(() => _currentGame = null);
+    }
+
     await Navigator.pushNamed(context, NewGameScreen.routeName);
     await _loadCurrentGame();
   }
