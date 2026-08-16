@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../models/game_state.dart';
 import '../services/game_storage.dart';
-import '../widgets/md_brand_header.dart';
 import 'history_screen.dart';
 import 'new_game_screen.dart';
 import 'score_screen.dart';
@@ -31,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadCurrentGame() async {
     final game = await GameStorage.loadCurrentGame();
     if (!mounted) return;
+
     setState(() {
       _currentGame = game;
       _loading = false;
@@ -80,21 +80,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (game == null) {
       setState(() => _currentGame = null);
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('There is no saved game to resume.')),
+        const SnackBar(
+          content: Text('There is no saved game to resume.'),
+        ),
       );
       return;
     }
 
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => ScoreScreen(initialGame: game)),
+      MaterialPageRoute<void>(
+        builder: (_) => ScoreScreen(initialGame: game),
+      ),
     );
+
     await _loadCurrentGame();
   }
 
   @override
   Widget build(BuildContext context) {
     final game = _currentGame;
+
     final displayName = game == null
         ? 'No game in progress'
         : game.gameName.trim().isEmpty
@@ -107,85 +114,180 @@ class _HomeScreenState extends State<HomeScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+              padding: const EdgeInsets.fromLTRB(22, 24, 22, 12),
               children: [
-                const MDBrandHeader(),
-                const SizedBox(height: 28),
+                Center(
+                  child: Image.asset(
+                    'assets/images/dom_mino.png',
+                    height: 145,
+                    fit: BoxFit.contain,
+                    semanticLabel: 'Dom Minó',
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'MD SCORE',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Mexican Dominoes Score',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppTheme.accent,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 10),
                 Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(22),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    child: Row(
                       children: [
-                        Text(
-                          'Welcome back',
-                          style: Theme.of(context).textTheme.headlineSmall,
+                        const Icon(
+                          Icons.sports_esports_rounded,
+                          color: AppTheme.accent,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Ready for the next round? Create a new game or continue your last match.',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.sports_esports_rounded,
-                              color: AppTheme.accent,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _loading
-                                  ? const LinearProgressIndicator()
-                                  : Text(
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _loading
+                              ? const LinearProgressIndicator()
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
                                       game == null
-                                          ? displayName
-                                          : '$displayName • Round ${game.round}',
-                                      style:
-                                          Theme.of(context).textTheme.bodyMedium,
+                                          ? 'No game in progress'
+                                          : displayName,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                     ),
-                            ),
-                          ],
+                                    if (game != null) ...[
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        'Round ${game.round}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
+                                      ),
+                                    ],
+                                  ],
+                                ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 22),
-                FilledButton.icon(
-                  onPressed: _openNewGame,
-                  icon: const Icon(Icons.add_circle_outline_rounded),
-                  label: const Text('New Game'),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: game == null || _loading ? null : _resumeGame,
-                  icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('Resume Game'),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    HistoryScreen.routeName,
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 42,
+                  child: FilledButton.icon(
+                    onPressed: _openNewGame,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFE53935),
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.add_circle_outline_rounded),
+                    label: const Text(
+                      'NEW GAME',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
-                  icon: const Icon(Icons.history_rounded),
-                  label: const Text('History'),
                 ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    SettingsScreen.routeName,
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 42,
+                  child: FilledButton.icon(
+                    onPressed: game == null || _loading ? null : _resumeGame,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E88E5),
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: const Text(
+                      'RESUME GAME',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
-                  icon: const Icon(Icons.settings_outlined),
-                  label: const Text('Settings'),
                 ),
-                const SizedBox(height: 26),
-                Text(
-                  'Beautiful. Simple. Easy to use.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 42,
+                  child: FilledButton.icon(
+                    onPressed: () => Navigator.pushNamed(
+                      context,
+                      HistoryScreen.routeName,
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF43A047),
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.history_rounded),
+                    label: const Text(
+                      'HISTORY',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 42,
+                  child: FilledButton.icon(
+                    onPressed: () => Navigator.pushNamed(
+                      context,
+                      SettingsScreen.routeName,
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF303030),
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.settings_outlined),
+                    label: const Text(
+                      'SETTINGS',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Presented by ',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    Text(
+                      'Dom Minó',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.accent,
+                            fontWeight: FontWeight.w800,
+                            fontStyle: FontStyle.italic,
+                          ),
+                    ),
+                  ],
                 ),
               ],
             ),
