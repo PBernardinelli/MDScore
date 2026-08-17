@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../widgets/md_brand_header.dart';
 import 'players_screen.dart';
 
 class NewGameScreen extends StatefulWidget {
@@ -25,23 +24,56 @@ class _NewGameScreenState extends State<NewGameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('New Game')),
+      appBar: AppBar(
+        title: const Text(
+          'NEW GAME',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
               children: [
-                const MDBrandHeader(compact: true),
-                const SizedBox(height: 24),
+                Center(
+                  child: Image.asset(
+                    'assets/images/dom_mino.png',
+                    height: 105,
+                    fit: BoxFit.contain,
+                    semanticLabel: 'Dom Minó',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'MD SCORE',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Mexican Dominoes Score',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFFFFA000),
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 18),
                 Text(
                   'Set up the table',
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Choose the number of players. Names are entered on the next screen.',
+                  textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 24),
@@ -62,8 +94,8 @@ class _NewGameScreenState extends State<NewGameScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Number of players',
-                          style: Theme.of(context).textTheme.titleLarge,
+                          'NUMBER OF PLAYERS',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: 0.5),
                         ),
                         const SizedBox(height: 6),
                         Text(
@@ -90,7 +122,13 @@ class _NewGameScreenState extends State<NewGameScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                FilledButton.icon(
+                SizedBox(
+                  height: 50,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF43A047),
+                      foregroundColor: Colors.white,
+                    ),
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute<void>(
@@ -101,8 +139,15 @@ class _NewGameScreenState extends State<NewGameScreen> {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.arrow_forward_rounded),
-                  label: const Text('Continue'),
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text(
+                    'CONTINUE',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
                 ),
               ],
             ),

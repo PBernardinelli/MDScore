@@ -81,24 +81,52 @@ class _PlayersScreenState extends State<PlayersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Players')),
+      appBar: AppBar(
+        title: const Text(
+          'PLAYERS',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
               children: [
-                Text(
-                  'Who is playing?',
-                  style: Theme.of(context).textTheme.headlineSmall,
+                Row(
+                  children: [
+                    Image.asset(
+                      'assets/images/dom_mino.png',
+                      height: 58,
+                      width: 58,
+                      fit: BoxFit.contain,
+                      semanticLabel: 'Dom Minó',
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Who is playing?',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'You can change the suggested names before starting.',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'You can change the suggested names before starting.',
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 18),
                 ...List.generate(widget.playerCount, (index) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -112,8 +140,14 @@ class _PlayersScreenState extends State<PlayersScreen> {
                     ),
                   );
                 }),
-                const SizedBox(height: 12),
-                FilledButton.icon(
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 50,
+                  child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF43A047),
+                    foregroundColor: Colors.white,
+                  ),
                   onPressed: _startingGame ? null : _startGame,
                   icon: _startingGame
                       ? const SizedBox(
@@ -122,7 +156,14 @@ class _PlayersScreenState extends State<PlayersScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.play_arrow_rounded),
-                  label: Text(_startingGame ? 'Starting...' : 'Start Game'),
+                  label: Text(
+                    _startingGame ? 'STARTING...' : 'START GAME',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
                 ),
               ],
             ),

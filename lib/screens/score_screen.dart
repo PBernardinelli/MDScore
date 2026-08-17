@@ -354,12 +354,11 @@ class _ScoreScreenState extends State<ScoreScreen> {
                   color: AppTheme.accent.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'DM',
-                  style: TextStyle(
-                    color: AppTheme.accent,
-                    fontWeight: FontWeight.w800,
-                  ),
+                child: Image.asset(
+                  'assets/images/dom_mino.png',
+                  height: 30,
+                  width: 30,
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
@@ -392,8 +391,11 @@ class _ScoreScreenState extends State<ScoreScreen> {
           children: [
             Expanded(
               child: Text(
-                'Round $_round',
-                style: Theme.of(context).textTheme.headlineMedium,
+                'ROUND $_round',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                ),
               ),
             ),
             Text(
@@ -402,6 +404,13 @@ class _ScoreScreenState extends State<ScoreScreen> {
             ),
           ],
         ),
+        Text(
+          'Double $_round',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: AppTheme.accent,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
         const SizedBox(height: 10),
         const _ScoreHeader(),
         const SizedBox(height: 5),
@@ -409,6 +418,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
           return Padding(
             padding: const EdgeInsets.only(bottom: 5),
             child: _ScoreRow(
+              playerIndex: index,
               playerName: _playerNames[index],
               total: _totals[index],
               controller: _roundControllers[index],
@@ -427,13 +437,17 @@ class _ScoreScreenState extends State<ScoreScreen> {
           child: OutlinedButton.icon(
             onPressed: _canUndoLastRound ? _confirmUndoLastRound : null,
             icon: const Icon(Icons.undo_rounded),
-            label: const Text('Undo Last Round'),
+            label: const Text('UNDO LAST ROUND', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ),
         const SizedBox(height: 8),
         SizedBox(
           height: 46,
           child: FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF43A047),
+              foregroundColor: Colors.white,
+            ),
             onPressed: _savingRound ? null : _saveRound,
             icon: _savingRound
                 ? const SizedBox(
@@ -446,8 +460,12 @@ class _ScoreScreenState extends State<ScoreScreen> {
               _savingRound
                   ? 'Saving...'
                   : _round == 0
-                      ? 'Finish Game'
-                      : 'Save Round',
+                      ? 'FINISH GAME'
+                      : 'SAVE ROUND',
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
         ),
@@ -575,8 +593,20 @@ class _ScoreHeader extends StatelessWidget {
   }
 }
 
+const List<Color> _playerColors = <Color>[
+  Color(0xFFE53935),
+  Color(0xFF1E88E5),
+  Color(0xFF43A047),
+  Color(0xFF8E24AA),
+  Color(0xFFFB8C00),
+  Color(0xFFFBC02D),
+  Color(0xFFEC407A),
+  Color(0xFF757575),
+];
+
 class _ScoreRow extends StatelessWidget {
   const _ScoreRow({
+    required this.playerIndex,
     required this.playerName,
     required this.total,
     required this.controller,
@@ -588,6 +618,7 @@ class _ScoreRow extends StatelessWidget {
     required this.onSubmitted,
   });
 
+  final int playerIndex;
   final String playerName;
   final int total;
   final TextEditingController controller;
@@ -618,10 +649,22 @@ class _ScoreRow extends StatelessWidget {
           children: [
             Expanded(
               flex: 5,
-              child: Text(
-                playerName,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w700),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.train_rounded,
+                    size: 21,
+                    color: _playerColors[playerIndex % _playerColors.length],
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      playerName,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
               ),
             ),
             Expanded(
