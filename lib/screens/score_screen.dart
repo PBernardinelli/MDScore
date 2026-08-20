@@ -13,7 +13,10 @@ import '../models/game_state.dart';
 import '../services/game_storage.dart';
 
 class ScoreScreen extends StatefulWidget {
-  const ScoreScreen({super.key, required this.initialGame});
+  const ScoreScreen({
+    super.key,
+    required this.initialGame,
+  });
 
   final GameState initialGame;
 
@@ -180,9 +183,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
       if (value == null || value < 0) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Enter the score for ${_playerNames[index]}.'),
-          ),
+          SnackBar(content: Text('Enter the score for ${_playerNames[index]}.')),
         );
         _focusNodes[index].requestFocus();
         return;
@@ -217,7 +218,11 @@ class _ScoreScreenState extends State<ScoreScreen> {
     });
 
     if (finishesGame) {
-      _queueStorage(GameStorage.clearCurrentGame);
+      final finishedGame = _currentGameState();
+      _queueStorage(() async {
+        await GameStorage.saveFinishedGame(finishedGame);
+        await GameStorage.clearCurrentGame();
+      });
     } else {
       final game = _currentGameState();
       _queueStorage(() => GameStorage.saveCurrentGame(game));
@@ -227,9 +232,9 @@ class _ScoreScreenState extends State<ScoreScreen> {
     setState(() => _savingRound = false);
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Round $savedRound saved.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Round $savedRound saved.')),
+    );
 
     if (!_gameFinished) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -295,7 +300,6 @@ class _ScoreScreenState extends State<ScoreScreen> {
       _round = restoredRound;
       _activePlayerIndex = null;
 
-      // Reutiliza os campos existentes e restaura os valores visivelmente.
       for (var index = 0; index < _roundControllers.length; index++) {
         _roundControllers[index].text = restoredScores[index].toString();
       }
@@ -350,10 +354,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
             padding: const EdgeInsets.only(right: 16),
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppTheme.accent.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(20),
@@ -441,10 +442,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
           child: OutlinedButton.icon(
             onPressed: _canUndoLastRound ? _confirmUndoLastRound : null,
             icon: const Icon(Icons.undo_rounded),
-            label: const Text(
-              'UNDO LAST ROUND',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
+            label: const Text('UNDO LAST ROUND', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ),
         const SizedBox(height: 8),
@@ -467,8 +465,8 @@ class _ScoreScreenState extends State<ScoreScreen> {
               _savingRound
                   ? 'Saving...'
                   : _round == 0
-                  ? 'FINISH GAME'
-                  : 'SAVE ROUND',
+                      ? 'FINISH GAME'
+                      : 'SAVE ROUND',
               style: const TextStyle(
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.5,
@@ -496,12 +494,8 @@ class _GameFinishedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final winnerNames = winnerIndexes
-        .map((index) => playerNames[index])
-        .join(', ');
-    final winningTotal = winnerIndexes.isEmpty
-        ? 0
-        : totals[winnerIndexes.first];
+    final winnerNames = winnerIndexes.map((index) => playerNames[index]).join(', ');
+    final winningTotal = winnerIndexes.isEmpty ? 0 : totals[winnerIndexes.first];
     final isTie = winnerIndexes.length > 1;
 
     return ListView(
@@ -532,9 +526,9 @@ class _GameFinishedView extends StatelessWidget {
                   winnerNames,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppTheme.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w800,
+                      ),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -570,8 +564,7 @@ class _GameFinishedView extends StatelessWidget {
         }),
         const SizedBox(height: 12),
         OutlinedButton.icon(
-          onPressed: () =>
-              Navigator.of(context).popUntil((route) => route.isFirst),
+          onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
           icon: const Icon(Icons.home_outlined),
           label: const Text('Back to Home'),
         ),
@@ -707,9 +700,8 @@ class _ScoreRow extends StatelessWidget {
                     FilteringTextInputFormatter.digitsOnly,
                     LengthLimitingTextInputFormatter(3),
                   ],
-                  textInputAction: isLast
-                      ? TextInputAction.done
-                      : TextInputAction.next,
+                  textInputAction:
+                      isLast ? TextInputAction.done : TextInputAction.next,
                   textAlign: TextAlign.center,
                   onTap: () {
                     controller.selection = TextSelection(

@@ -6,6 +6,7 @@ class GameStorage {
   GameStorage._();
 
   static const String _currentGameKey = 'md_score.current_game.v1';
+  static const String _finishedGamesKey = 'md_score.finished_games.v1';
   static final SharedPreferencesAsync _preferences = SharedPreferencesAsync();
 
   static Future<void> saveCurrentGame(GameState game) async {
@@ -30,5 +31,33 @@ class GameStorage {
 
   static Future<void> clearCurrentGame() async {
     await _preferences.remove(_currentGameKey);
+  }
+
+  static Future<void> saveFinishedGame(GameState game) async {
+    final saved =
+        await _preferences.getStringList(_finishedGamesKey) ?? <String>[];
+
+    await _preferences.setStringList(
+      _finishedGamesKey,
+      <String>[game.toJson(), ...saved],
+    );
+  }
+
+  static Future<List<GameState>> loadFinishedGames() async {
+    final saved =
+        await _preferences.getStringList(_finishedGamesKey) ?? <String>[];
+    final games = <GameState>[];
+
+    for (final source in saved) {
+      try {
+        games.add(GameState.fromJson(source));
+      } catch (_) {}
+    }
+
+    return games;
+  }
+
+  static Future<void> clearFinishedGames() async {
+    await _preferences.remove(_finishedGamesKey);
   }
 }
