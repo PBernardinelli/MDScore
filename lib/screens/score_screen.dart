@@ -13,10 +13,7 @@ import '../models/game_state.dart';
 import '../services/game_storage.dart';
 
 class ScoreScreen extends StatefulWidget {
-  const ScoreScreen({
-    super.key,
-    required this.initialGame,
-  });
+  const ScoreScreen({super.key, required this.initialGame});
 
   final GameState initialGame;
 
@@ -36,6 +33,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
   late final List<int> _totals;
   late List<TextEditingController> _roundControllers;
   late List<FocusNode> _focusNodes;
+  late final List<RoundResult> _rounds;
 
   int? _lastSavedRound;
   List<int>? _lastRoundScores;
@@ -52,6 +50,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
     _createdAt = game.createdAt;
     _round = game.round;
     _totals = List<int>.from(game.totals);
+    _rounds = List<RoundResult>.from(game.rounds);
     _lastSavedRound = game.lastSavedRound;
     _lastRoundScores = game.lastRoundScores == null
         ? null
@@ -114,6 +113,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
       playerNames: List<String>.from(_playerNames),
       round: _round,
       totals: List<int>.from(_totals),
+      rounds: List<RoundResult>.from(_rounds),
       currentScores: _roundControllers
           .map((controller) => controller.text.trim())
           .toList(growable: false),
@@ -183,7 +183,9 @@ class _ScoreScreenState extends State<ScoreScreen> {
       if (value == null || value < 0) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Enter the score for ${_playerNames[index]}.')),
+          SnackBar(
+            content: Text('Enter the score for ${_playerNames[index]}.'),
+          ),
         );
         _focusNodes[index].requestFocus();
         return;
@@ -199,6 +201,9 @@ class _ScoreScreenState extends State<ScoreScreen> {
     setState(() {
       _lastSavedRound = savedRound;
       _lastRoundScores = List<int>.from(values);
+      _rounds.add(
+        RoundResult(round: savedRound, scores: List<int>.from(values)),
+      );
 
       for (var index = 0; index < values.length; index++) {
         _totals[index] += values[index];
@@ -232,9 +237,9 @@ class _ScoreScreenState extends State<ScoreScreen> {
     setState(() => _savingRound = false);
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Round $savedRound saved.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Round $savedRound saved.')));
 
     if (!_gameFinished) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -289,6 +294,9 @@ class _ScoreScreenState extends State<ScoreScreen> {
     setState(() => _savingRound = true);
 
     setState(() {
+      if (_rounds.isNotEmpty && _rounds.last.round == restoredRound) {
+        _rounds.removeLast();
+      }
       for (var index = 0; index < restoredScores.length; index++) {
         _totals[index] -= restoredScores[index];
 
@@ -354,7 +362,10 @@ class _ScoreScreenState extends State<ScoreScreen> {
             padding: const EdgeInsets.only(right: 16),
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.accent.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(20),
@@ -442,7 +453,10 @@ class _ScoreScreenState extends State<ScoreScreen> {
           child: OutlinedButton.icon(
             onPressed: _canUndoLastRound ? _confirmUndoLastRound : null,
             icon: const Icon(Icons.undo_rounded),
-            label: const Text('UNDO LAST ROUND', style: TextStyle(fontWeight: FontWeight.w700)),
+            label: const Text(
+              'UNDO LAST ROUND',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -465,8 +479,8 @@ class _ScoreScreenState extends State<ScoreScreen> {
               _savingRound
                   ? 'Saving...'
                   : _round == 0
-                      ? 'FINISH GAME'
-                      : 'SAVE ROUND',
+                  ? 'FINISH GAME'
+                  : 'SAVE ROUND',
               style: const TextStyle(
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.5,
@@ -494,8 +508,12 @@ class _GameFinishedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final winnerNames = winnerIndexes.map((index) => playerNames[index]).join(', ');
-    final winningTotal = winnerIndexes.isEmpty ? 0 : totals[winnerIndexes.first];
+    final winnerNames = winnerIndexes
+        .map((index) => playerNames[index])
+        .join(', ');
+    final winningTotal = winnerIndexes.isEmpty
+        ? 0
+        : totals[winnerIndexes.first];
     final isTie = winnerIndexes.length > 1;
 
     return ListView(
@@ -526,9 +544,9 @@ class _GameFinishedView extends StatelessWidget {
                   winnerNames,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: AppTheme.primary,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -564,7 +582,8 @@ class _GameFinishedView extends StatelessWidget {
         }),
         const SizedBox(height: 12),
         OutlinedButton.icon(
-          onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+          onPressed: () =>
+              Navigator.of(context).popUntil((route) => route.isFirst),
           icon: const Icon(Icons.home_outlined),
           label: const Text('Back to Home'),
         ),
@@ -700,8 +719,9 @@ class _ScoreRow extends StatelessWidget {
                     FilteringTextInputFormatter.digitsOnly,
                     LengthLimitingTextInputFormatter(3),
                   ],
-                  textInputAction:
-                      isLast ? TextInputAction.done : TextInputAction.next,
+                  textInputAction: isLast
+                      ? TextInputAction.done
+                      : TextInputAction.next,
                   textAlign: TextAlign.center,
                   onTap: () {
                     controller.selection = TextSelection(
