@@ -343,11 +343,61 @@ class _ScoreScreenState extends State<ScoreScreen> {
 
   List<int> get _winnerIndexes {
     if (_totals.isEmpty) return const [];
+
+    // 1º critério: menor total de pontos
     final lowestTotal = _totals.reduce((a, b) => a < b ? a : b);
-    return List<int>.generate(
+
+    var candidates = List<int>.generate(
       _playerNames.length,
       (index) => index,
     ).where((index) => _totals[index] == lowestTotal).toList();
+
+    if (candidates.length <= 1) return candidates;
+
+    // 2º critério: maior quantidade de rounds com zero
+    int zeroCount(int playerIndex) {
+      return _rounds
+          .where(
+            (round) =>
+                playerIndex < round.scores.length &&
+                round.scores[playerIndex] == 0,
+          )
+          .length;
+    }
+
+    final mostZeros = candidates.map(zeroCount).reduce((a, b) => a > b ? a : b);
+
+    candidates = candidates
+        .where((index) => zeroCount(index) == mostZeros)
+        .toList();
+
+    if (candidates.length <= 1) return candidates;
+
+    // 3º critério: menor pior rodada
+    int worstRound(int playerIndex) {
+      var worst = 0;
+
+      for (final round in _rounds) {
+        if (playerIndex < round.scores.length) {
+          final score = round.scores[playerIndex];
+          if (score > worst) {
+            worst = score;
+          }
+        }
+      }
+
+      return worst;
+    }
+
+    final lowestWorstRound = candidates
+        .map(worstRound)
+        .reduce((a, b) => a < b ? a : b);
+
+    candidates = candidates
+        .where((index) => worstRound(index) == lowestWorstRound)
+        .toList();
+
+    return candidates;
   }
 
   @override
