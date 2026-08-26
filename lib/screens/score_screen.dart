@@ -12,6 +12,8 @@ import '../core/app_theme.dart';
 import '../models/game_state.dart';
 import '../services/game_storage.dart';
 
+import 'round_history_screen.dart';
+
 class ScoreScreen extends StatefulWidget {
   const ScoreScreen({super.key, required this.initialGame});
 
@@ -510,6 +512,31 @@ class _ScoreScreenState extends State<ScoreScreen> {
           ),
         ),
         const SizedBox(height: 8),
+
+        SizedBox(
+          height: 44,
+          child: OutlinedButton.icon(
+            onPressed: _rounds.isEmpty
+                ? null
+                : () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => RoundHistoryScreen(
+                          playerNames: List<String>.from(_playerNames),
+                          rounds: List<RoundResult>.from(_rounds),
+                        ),
+                      ),
+                    );
+                  },
+            icon: const Icon(Icons.history),
+            label: const Text(
+              'ROUND HISTORY',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+
         SizedBox(
           height: 46,
           child: FilledButton.icon(
