@@ -28,11 +28,12 @@ class _ScoreScreenState extends State<ScoreScreen> {
   int? _activePlayerIndex;
   bool _gameFinished = false;
   bool _savingRound = false;
-
+  int? _editingRound;
+  List<String>? _currentRoundBackup;
   late final String _gameName;
   late final List<String> _playerNames;
   late final DateTime _createdAt;
-  late final List<int> _totals;
+  late List<int> _totals;
   late List<TextEditingController> _roundControllers;
   late List<FocusNode> _focusNodes;
   late final List<RoundResult> _rounds;
@@ -155,10 +156,13 @@ class _ScoreScreenState extends State<ScoreScreen> {
   }
 
   void _handleScoreChanged(int index, String text) {
+    if (_editingRound != null) return;
+
     _scheduleCurrentGameSave();
   }
 
   void _handleSubmitted(int index) {
+    if (_editingRound != null) return;
     if (_allScoresEntered) {
       _saveRound();
       return;
@@ -171,6 +175,73 @@ class _ScoreScreenState extends State<ScoreScreen> {
         return;
       }
     }
+  }
+
+  Future<void> _saveEditedRound() async {
+    if (_editingRound == null) return;
+
+    final values = <int>[];
+
+    for (var index = 0; index < _roundControllers.length; index++) {
+      final value = int.tryParse(_roundControllers[index].text.trim());
+
+      if (value == null || value < 0) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Enter the score for ${_playerNames[index]}.'),
+          ),
+        );
+
+        _focusNodes[index].requestFocus();
+        return;
+      }
+
+      values.add(value);
+    }
+
+    final editedRound = _editingRound!;
+
+    final roundIndex = _rounds.indexWhere(
+      (roundResult) => roundResult.round == editedRound,
+    );
+
+    if (roundIndex == -1) return;
+
+    setState(() {
+      _rounds[roundIndex] = RoundResult(
+        round: editedRound,
+        scores: List<int>.from(values),
+      );
+
+      _totals = List<int>.filled(_playerNames.length, 0);
+
+      for (final roundResult in _rounds) {
+        for (
+          var index = 0;
+          index < _totals.length && index < roundResult.scores.length;
+          index++
+        ) {
+          _totals[index] += roundResult.scores[index];
+        }
+      }
+
+      if (_currentRoundBackup != null) {
+        for (
+          var index = 0;
+          index < _roundControllers.length &&
+              index < _currentRoundBackup!.length;
+          index++
+        ) {
+          _roundControllers[index].text = _currentRoundBackup![index];
+        }
+      }
+
+      _editingRound = null;
+      _currentRoundBackup = null;
+    });
+    await GameStorage.saveCurrentGame(_currentGameState());
   }
 
   Future<void> _saveRound() async {
@@ -460,12 +531,24 @@ class _ScoreScreenState extends State<ScoreScreen> {
             Expanded(
               child: Text(
                 'ROUND $_round',
+
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0.8,
                 ),
               ),
             ),
+
+            if (_editingRound != null)
+              Text(
+                'EDITING ROUND $_editingRound',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
+                ),
+              ),
+
             Text(
               '${13 - _round} of 13',
               style: Theme.of(context).textTheme.bodyMedium,
@@ -518,8 +601,8 @@ class _ScoreScreenState extends State<ScoreScreen> {
           child: OutlinedButton.icon(
             onPressed: _rounds.isEmpty
                 ? null
-                : () {
-                    Navigator.of(context).push(
+                : () async {
+                    final selectedRound = await Navigator.of(context).push<int>(
                       MaterialPageRoute(
                         builder: (_) => RoundHistoryScreen(
                           playerNames: List<String>.from(_playerNames),
@@ -527,7 +610,39 @@ class _ScoreScreenState extends State<ScoreScreen> {
                         ),
                       ),
                     );
+
+                    if (selectedRound == null) return;
+                    final roundToEdit = _rounds.firstWhere(
+                      (roundResult) => roundResult.round == selectedRound,
+                    );
+
+                    _currentRoundBackup = _roundControllers
+                        .map((controller) => controller.text)
+                        .toList();
+
+                    setState(() {
+                      _editingRound = selectedRound;
+                    });
+                    for (
+                      var index = 0;
+                      index < _roundControllers.length &&
+                          index < roundToEdit.scores.length;
+                      index++
+                    ) {
+                      _roundControllers[index].text = roundToEdit.scores[index]
+                          .toString();
+                    }
+                    if (!context.mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Round $selectedRound: ${roundToEdit.scores.join(', ')}',
+                        ),
+                      ),
+                    );
                   },
+
             icon: const Icon(Icons.history),
             label: const Text(
               'ROUND HISTORY',
@@ -544,7 +659,9 @@ class _ScoreScreenState extends State<ScoreScreen> {
               backgroundColor: const Color(0xFF43A047),
               foregroundColor: Colors.white,
             ),
-            onPressed: _savingRound ? null : _saveRound,
+            onPressed: (_savingRound || _editingRound != null)
+                ? null
+                : _saveRound,
             icon: _savingRound
                 ? const SizedBox(
                     width: 18,
@@ -565,6 +682,25 @@ class _ScoreScreenState extends State<ScoreScreen> {
             ),
           ),
         ),
+
+        if (_editingRound != null) ...[
+          const SizedBox(height: 8),
+
+          SizedBox(
+            height: 46,
+            child: FilledButton.icon(
+              onPressed: _saveEditedRound,
+              icon: const Icon(Icons.edit),
+              label: const Text(
+                'SAVE EDIT',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
