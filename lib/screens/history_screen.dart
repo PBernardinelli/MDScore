@@ -42,18 +42,69 @@ class _HistoryScreenState extends State<HistoryScreen> {
       return 'No result';
     }
 
+    // 1º critério: menor total
     final lowestTotal = game.totals.reduce((a, b) => a < b ? a : b);
-    final winners = <String>[];
 
-    for (var index = 0;
-        index < game.playerNames.length && index < game.totals.length;
-        index++) {
-      if (game.totals[index] == lowestTotal) {
-        winners.add(game.playerNames[index]);
-      }
+    var candidates =
+        List<int>.generate(game.playerNames.length, (index) => index)
+            .where(
+              (index) =>
+                  index < game.totals.length &&
+                  game.totals[index] == lowestTotal,
+            )
+            .toList();
+
+    if (candidates.isEmpty) return 'No result';
+
+    // 2º critério: maior quantidade de rounds com zero
+    int zeroCount(int playerIndex) {
+      return game.rounds
+          .where(
+            (round) =>
+                playerIndex < round.scores.length &&
+                round.scores[playerIndex] == 0,
+          )
+          .length;
     }
 
-    if (winners.isEmpty) return 'No result';
+    if (candidates.length > 1) {
+      final mostZeros = candidates
+          .map(zeroCount)
+          .reduce((a, b) => a > b ? a : b);
+
+      candidates = candidates
+          .where((index) => zeroCount(index) == mostZeros)
+          .toList();
+    }
+
+    // 3º critério: menor pior rodada
+    int worstRound(int playerIndex) {
+      var worst = 0;
+
+      for (final round in game.rounds) {
+        if (playerIndex < round.scores.length) {
+          final score = round.scores[playerIndex];
+
+          if (score > worst) {
+            worst = score;
+          }
+        }
+      }
+
+      return worst;
+    }
+
+    if (candidates.length > 1) {
+      final lowestWorstRound = candidates
+          .map(worstRound)
+          .reduce((a, b) => a < b ? a : b);
+
+      candidates = candidates
+          .where((index) => worstRound(index) == lowestWorstRound)
+          .toList();
+    }
+
+    final winners = candidates.map((index) => game.playerNames[index]).toList();
 
     if (winners.length == 1) {
       return '${winners.first} won • $lowestTotal points';
@@ -85,8 +136,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : _games.isEmpty
-                  ? _buildEmptyHistory(context)
-                  : _buildHistoryList(context),
+              ? _buildEmptyHistory(context)
+              : _buildHistoryList(context),
         ),
       ),
     );
@@ -108,10 +159,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         const SizedBox(height: 22),
         Card(
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 28,
-              vertical: 30,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 30),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -124,9 +172,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 Text(
                   'No finished games yet',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -166,8 +214,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     child: Text(
                       '${_games.length} finished ${_games.length == 1 ? 'game' : 'games'}',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ],
