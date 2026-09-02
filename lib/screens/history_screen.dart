@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/game_state.dart';
 import '../services/game_storage.dart';
+import 'game_details_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -227,6 +228,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
           return Card(
             child: ListTile(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => GameDetailsScreen(game: game),
+                  ),
+                );
+              },
+
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 18,
                 vertical: 8,
