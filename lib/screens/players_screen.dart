@@ -2,7 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../models/game_state.dart';
 import '../services/game_storage.dart';
+import '../services/settings_storage.dart';
+
 import 'score_screen.dart';
+
+
+
+
+
 
 class PlayersScreen extends StatefulWidget {
   const PlayersScreen({
@@ -25,10 +32,25 @@ class _PlayersScreenState extends State<PlayersScreen> {
   @override
   void initState() {
     super.initState();
+
     _controllers = List.generate(
       widget.playerCount,
       (index) => TextEditingController(text: 'Player ${index + 1}'),
     );
+
+    _loadRegularPlayers();
+  }
+
+  Future<void> _loadRegularPlayers() async {
+    final regularPlayers = await SettingsStorage.loadRegularPlayers();
+
+    if (!mounted) return;
+
+    for (var i = 0; i < regularPlayers.length && i < _controllers.length; i++) {
+      _controllers[i].text = regularPlayers[i];
+    }
+
+    setState(() {});
   }
 
   @override
@@ -65,9 +87,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
       if (!mounted) return;
 
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => ScoreScreen(initialGame: game),
-        ),
+        MaterialPageRoute<void>(builder: (_) => ScoreScreen(initialGame: game)),
       );
     } catch (_) {
       if (!mounted) return;
@@ -111,9 +131,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
                         children: [
                           Text(
                             'Who is playing?',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
+                            style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: 2),
@@ -144,26 +162,26 @@ class _PlayersScreenState extends State<PlayersScreen> {
                 SizedBox(
                   height: 50,
                   child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF43A047),
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: _startingGame ? null : _startGame,
-                  icon: _startingGame
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.play_arrow_rounded),
-                  label: Text(
-                    _startingGame ? 'STARTING...' : 'START GAME',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF43A047),
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: _startingGame ? null : _startGame,
+                    icon: _startingGame
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.play_arrow_rounded),
+                    label: Text(
+                      _startingGame ? 'STARTING...' : 'START GAME',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
-                ),
                 ),
               ],
             ),

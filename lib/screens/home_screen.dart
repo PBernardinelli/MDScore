@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../models/game_state.dart';
 import '../services/game_storage.dart';
+import '../services/settings_storage.dart';
 import 'history_screen.dart';
 import 'new_game_screen.dart';
 import 'score_screen.dart';
@@ -39,38 +40,46 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _openNewGame() async {
     if (_currentGame != null) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) {
-          return AlertDialog(
-            title: const Text('Game in progress'),
-            content: const Text(
-              'A game is already in progress.\n\n'
-              'Starting a new game will discard the current game.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('Start New Game'),
-              ),
-            ],
-          );
-        },
-      );
+      final confirmNewGame = await SettingsStorage.loadConfirmNewGame();
 
-      if (confirmed != true) return;
+      if (!mounted) return;
+
+      if (confirmNewGame) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) {
+            return AlertDialog(
+              title: const Text('Game in progress'),
+              content: const Text(
+                'A game is already in progress.\n\n'
+                'Starting a new game will discard the current game.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Start New Game'),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (confirmed != true) return;
+      }
 
       await GameStorage.clearCurrentGame();
+
       if (!mounted) return;
 
       setState(() => _currentGame = null);
     }
 
     await Navigator.pushNamed(context, NewGameScreen.routeName);
+
     await _loadCurrentGame();
   }
 
@@ -82,17 +91,13 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() => _currentGame = null);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('There is no saved game to resume.'),
-        ),
+        const SnackBar(content: Text('There is no saved game to resume.')),
       );
       return;
     }
 
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ScoreScreen(initialGame: game),
-      ),
+      MaterialPageRoute<void>(builder: (_) => ScoreScreen(initialGame: game)),
     );
 
     await _loadCurrentGame();
@@ -105,8 +110,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final displayName = game == null
         ? 'No game in progress'
         : game.gameName.trim().isEmpty
-            ? 'Game in progress'
-            : game.gameName;
+        ? 'Game in progress'
+        : game.gameName;
 
     return Scaffold(
       body: SafeArea(
@@ -129,18 +134,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   'MD SCORE',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
-                      ),
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Mexican Dominoes Score',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.accent,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: AppTheme.accent,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Card(
@@ -177,9 +182,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                       const SizedBox(height: 3),
                                       Text(
                                         'Round ${game.round}',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodyMedium,
                                       ),
                                     ],
                                   ],
@@ -231,10 +236,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 SizedBox(
                   height: 42,
                   child: FilledButton.icon(
-                    onPressed: () => Navigator.pushNamed(
-                      context,
-                      HistoryScreen.routeName,
-                    ),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, HistoryScreen.routeName),
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF43A047),
                       foregroundColor: Colors.white,
@@ -253,10 +256,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 SizedBox(
                   height: 42,
                   child: FilledButton.icon(
-                    onPressed: () => Navigator.pushNamed(
-                      context,
-                      SettingsScreen.routeName,
-                    ),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, SettingsScreen.routeName),
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF303030),
                       foregroundColor: Colors.white,
@@ -282,10 +283,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       'Dom Minó',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.accent,
-                            fontWeight: FontWeight.w800,
-                            fontStyle: FontStyle.italic,
-                          ),
+                        color: AppTheme.accent,
+                        fontWeight: FontWeight.w800,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ],
                 ),
