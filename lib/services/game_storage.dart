@@ -37,10 +37,10 @@ class GameStorage {
     final saved =
         await _preferences.getStringList(_finishedGamesKey) ?? <String>[];
 
-    await _preferences.setStringList(
-      _finishedGamesKey,
-      <String>[game.toJson(), ...saved],
-    );
+    await _preferences.setStringList(_finishedGamesKey, <String>[
+      game.toJson(),
+      ...saved,
+    ]);
   }
 
   static Future<List<GameState>> loadFinishedGames() async {
@@ -59,5 +59,20 @@ class GameStorage {
 
   static Future<void> clearFinishedGames() async {
     await _preferences.remove(_finishedGamesKey);
+  }
+
+  static Future<void> deleteFinishedGame(GameState game) async {
+    final saved =
+        await _preferences.getStringList(_finishedGamesKey) ?? <String>[];
+
+    final gameJson = game.toJson();
+
+    final index = saved.indexOf(gameJson);
+
+    if (index == -1) return;
+
+    saved.removeAt(index);
+
+    await _preferences.setStringList(_finishedGamesKey, saved);
   }
 }

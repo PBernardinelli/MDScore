@@ -121,6 +121,39 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return '$month/$day/${date.year}';
   }
 
+  Future<void> _deleteGame(GameState game) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete Game?'),
+          content: Text(
+            'Delete "${_gameTitle(game)}" from history?\n\n'
+            'This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    await GameStorage.deleteFinishedGame(game);
+
+    if (!mounted) return;
+
+    await _loadHistory();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -254,6 +287,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   '${_winnerText(game)}',
                 ),
               ),
+
+              trailing: IconButton(
+                icon: const Icon(Icons.delete_outline_rounded),
+                tooltip: 'Delete game',
+                onPressed: () => _deleteGame(game),
+              ),
+
               isThreeLine: true,
             ),
           );
