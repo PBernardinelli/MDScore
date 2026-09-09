@@ -323,6 +323,71 @@ class _ScoreScreenState extends State<ScoreScreen> {
     }
   }
 
+  Future<void> _confirmEndGame() async {
+    if (_savingRound || _editingRound != null || _rounds.isEmpty) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('End Game?'),
+          content: Text(
+            'The game will end after the last saved round.\n\n'
+            'Round $_round has not been saved and will not be included.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('End Game'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+    await _endGame();
+    // The actual game ending will be added in the next step.
+  }
+
+  Future<void> _endGame() async {
+    if (_gameFinished ||
+        _savingRound ||
+        _editingRound != null ||
+        _rounds.isEmpty) {
+      return;
+    }
+
+    _persistTimer?.cancel();
+
+    setState(() {
+      _savingRound = true;
+
+      _disposeRoundInputs();
+      _roundControllers = <TextEditingController>[];
+      _focusNodes = <FocusNode>[];
+      _activePlayerIndex = null;
+      _gameFinished = true;
+    });
+
+    final finishedGame = _currentGameState();
+
+    await GameStorage.saveFinishedGame(finishedGame);
+    await GameStorage.clearCurrentGame();
+
+    if (!mounted) return;
+
+    setState(() {
+      _savingRound = false;
+    });
+  }
+
   Future<void> _confirmUndoLastRound() async {
     if (!_canUndoLastRound) return;
 
@@ -679,6 +744,23 @@ class _ScoreScreenState extends State<ScoreScreen> {
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.5,
               ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        SizedBox(
+          height: 44,
+          child: OutlinedButton.icon(
+            onPressed:
+                (_savingRound || _editingRound != null || _rounds.isEmpty)
+                ? null
+                : _confirmEndGame,
+            icon: const Icon(Icons.stop_circle_outlined),
+            label: const Text(
+              'END GAME',
+              style: TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
         ),
