@@ -14,6 +14,9 @@ import '../services/game_storage.dart';
 
 import 'round_history_screen.dart';
 
+import 'package:audioplayers/audioplayers.dart';
+import '../services/settings_storage.dart';
+
 class ScoreScreen extends StatefulWidget {
   const ScoreScreen({super.key, required this.initialGame});
 
@@ -37,7 +40,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
   late List<TextEditingController> _roundControllers;
   late List<FocusNode> _focusNodes;
   late final List<RoundResult> _rounds;
-
+  final AudioPlayer _audioPlayer = AudioPlayer();
   int? _lastSavedRound;
   List<int>? _lastRoundScores;
 
@@ -244,6 +247,22 @@ class _ScoreScreenState extends State<ScoreScreen> {
     await GameStorage.saveCurrentGame(_currentGameState());
   }
 
+  Future<void> _playSaveRoundSound() async {
+    final soundEnabled = await SettingsStorage.loadSoundEnabled();
+
+    if (!soundEnabled) return;
+
+    await _audioPlayer.play(AssetSource('sounds/save_round.wav'));
+  }
+
+  Future<void> _playGameFinishedSound() async {
+    final soundEnabled = await SettingsStorage.loadSoundEnabled();
+
+    if (!soundEnabled) return;
+
+    await _audioPlayer.play(AssetSource('sounds/game_finished.wav'));
+  }
+
   Future<void> _saveRound() async {
     if (_gameFinished || _savingRound) return;
 
@@ -308,6 +327,14 @@ class _ScoreScreenState extends State<ScoreScreen> {
 
     if (!mounted) return;
     setState(() => _savingRound = false);
+
+    if (finishesGame) {
+      await _playGameFinishedSound();
+    } else {
+      await _playSaveRoundSound();
+    }
+
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(
@@ -386,6 +413,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
     setState(() {
       _savingRound = false;
     });
+    await _playGameFinishedSound();
   }
 
   Future<void> _confirmUndoLastRound() async {
