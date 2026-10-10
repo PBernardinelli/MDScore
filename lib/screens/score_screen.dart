@@ -89,8 +89,6 @@ class _ScoreScreenState extends State<ScoreScreen> {
         if (!mounted) return;
         if (node.hasFocus) {
           setState(() => _activePlayerIndex = index);
-        } else if (_activePlayerIndex == index) {
-          setState(() => _activePlayerIndex = null);
         }
       });
       return node;
@@ -162,6 +160,56 @@ class _ScoreScreenState extends State<ScoreScreen> {
     if (_editingRound != null) return;
 
     _scheduleCurrentGameSave();
+  }
+
+  void _enterDigit(String digit) {
+    final index = _activePlayerIndex;
+    if (index == null) return;
+
+    final controller = _roundControllers[index];
+    final current = controller.text;
+
+    if (current.length >= 3) return;
+
+    controller.text = '$current$digit';
+    controller.selection = TextSelection.collapsed(
+      offset: controller.text.length,
+    );
+
+    _handleScoreChanged(index, controller.text);
+  }
+
+  void _deleteDigit() {
+    final index = _activePlayerIndex;
+    if (index == null) return;
+
+    final controller = _roundControllers[index];
+    final current = controller.text;
+
+    if (current.isEmpty) return;
+
+    controller.text = current.substring(0, current.length - 1);
+    controller.selection = TextSelection.collapsed(
+      offset: controller.text.length,
+    );
+
+    _handleScoreChanged(index, controller.text);
+  }
+
+  void _confirmScore() {
+    final index = _activePlayerIndex;
+    if (index == null) return;
+
+    if (_roundControllers[index].text.trim().isEmpty) {
+      return;
+    }
+
+    if (index < _playerNames.length - 1) {
+      _focusNodes[index + 1].requestFocus();
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
   }
 
   void _handleSubmitted(int index) {
@@ -675,6 +723,7 @@ class _ScoreScreenState extends State<ScoreScreen> {
             ),
           );
         }),
+        _buildNumberPad(),
         const SizedBox(height: 8),
         SizedBox(
           height: 44,
@@ -811,6 +860,72 @@ class _ScoreScreenState extends State<ScoreScreen> {
             ),
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildNumberPad() {
+    Widget numberButton(String value) {
+      return Expanded(
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: SizedBox(
+            height: 44,
+            child: FilledButton(
+              onPressed: () => _enterDigit(value),
+              child: Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        Row(
+          children: [numberButton('1'), numberButton('2'), numberButton('3')],
+        ),
+        Row(
+          children: [numberButton('4'), numberButton('5'), numberButton('6')],
+        ),
+        Row(
+          children: [numberButton('7'), numberButton('8'), numberButton('9')],
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(3),
+                child: SizedBox(
+                  height: 44,
+                  child: FilledButton(
+                    onPressed: _deleteDigit,
+                    child: const Icon(Icons.backspace_outlined),
+                  ),
+                ),
+              ),
+            ),
+            numberButton('0'),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(3),
+                child: SizedBox(
+                  height: 44,
+                  child: FilledButton(
+                    onPressed: _confirmScore,
+                    child: const Icon(Icons.check_rounded),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -1034,6 +1149,7 @@ class _ScoreRow extends StatelessWidget {
                   controller: controller,
                   focusNode: focusNode,
                   autofocus: autofocus,
+                  readOnly: true,
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: false,
                     signed: false,
