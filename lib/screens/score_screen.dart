@@ -205,7 +205,23 @@ class _ScoreScreenState extends State<ScoreScreen> {
     }
 
     if (index < _playerNames.length - 1) {
-      _focusNodes[index + 1].requestFocus();
+      final nextIndex = index + 1;
+      _focusNodes[nextIndex].requestFocus();
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        final targetContext = _focusNodes[nextIndex].context;
+        if (targetContext == null) return;
+
+        Scrollable.ensureVisible(
+          targetContext,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          alignment: 0.5,
+        );
+      });
+
       return;
     }
 
@@ -664,204 +680,218 @@ class _ScoreScreenState extends State<ScoreScreen> {
   }
 
   Widget _buildScoreView(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 18),
+    return Column(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'ROUND $_round',
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 18),
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'ROUND $_round',
 
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.8,
-                ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.8,
+                          ),
+                    ),
+                  ),
+
+                  if (_editingRound != null)
+                    Text(
+                      'EDITING ROUND $_editingRound',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                      ),
+                    ),
+
+                  Text(
+                    '${13 - _round} of 13',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
               ),
-            ),
-
-            if (_editingRound != null)
               Text(
-                'EDITING ROUND $_editingRound',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange,
-                ),
-              ),
-
-            Text(
-              '${13 - _round} of 13',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
-        Text(
-          'Double $_round',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: AppTheme.accent,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 10),
-        const _ScoreHeader(),
-        const SizedBox(height: 5),
-        ...List.generate(_playerNames.length, (index) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 5),
-            child: _ScoreRow(
-              playerIndex: index,
-              playerName: _playerNames[index],
-              total: _totals[index],
-              controller: _roundControllers[index],
-              focusNode: _focusNodes[index],
-              isActive: _activePlayerIndex == index,
-              isLast: index == _playerNames.length - 1,
-              autofocus: index == 0,
-              onChanged: (value) => _handleScoreChanged(index, value),
-              onSubmitted: () => _handleSubmitted(index),
-            ),
-          );
-        }),
-        _buildNumberPad(),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 44,
-          child: OutlinedButton.icon(
-            onPressed: _canUndoLastRound ? _confirmUndoLastRound : null,
-            icon: const Icon(Icons.undo_rounded),
-            label: const Text(
-              'UNDO LAST ROUND',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        SizedBox(
-          height: 44,
-          child: OutlinedButton.icon(
-            onPressed: _rounds.isEmpty
-                ? null
-                : () async {
-                    final selectedRound = await Navigator.of(context).push<int>(
-                      MaterialPageRoute(
-                        builder: (_) => RoundHistoryScreen(
-                          playerNames: List<String>.from(_playerNames),
-                          rounds: List<RoundResult>.from(_rounds),
-                        ),
-                      ),
-                    );
-
-                    if (selectedRound == null) return;
-                    final roundToEdit = _rounds.firstWhere(
-                      (roundResult) => roundResult.round == selectedRound,
-                    );
-
-                    _currentRoundBackup = _roundControllers
-                        .map((controller) => controller.text)
-                        .toList();
-
-                    setState(() {
-                      _editingRound = selectedRound;
-                    });
-                    for (
-                      var index = 0;
-                      index < _roundControllers.length &&
-                          index < roundToEdit.scores.length;
-                      index++
-                    ) {
-                      _roundControllers[index].text = roundToEdit.scores[index]
-                          .toString();
-                    }
-                    if (!context.mounted) return;
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Round $selectedRound: ${roundToEdit.scores.join(', ')}',
-                        ),
-                      ),
-                    );
-                  },
-
-            icon: const Icon(Icons.history),
-            label: const Text(
-              'ROUND HISTORY',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        SizedBox(
-          height: 46,
-          child: FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF43A047),
-              foregroundColor: Colors.white,
-            ),
-            onPressed: (_savingRound || _editingRound != null)
-                ? null
-                : _saveRound,
-            icon: _savingRound
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.save_outlined),
-            label: Text(
-              _savingRound
-                  ? 'Saving...'
-                  : _round == 0
-                  ? 'FINISH GAME'
-                  : 'SAVE ROUND',
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        SizedBox(
-          height: 44,
-          child: OutlinedButton.icon(
-            onPressed:
-                (_savingRound || _editingRound != null || _rounds.isEmpty)
-                ? null
-                : _confirmEndGame,
-            icon: const Icon(Icons.stop_circle_outlined),
-            label: const Text(
-              'END GAME',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
-
-        if (_editingRound != null) ...[
-          const SizedBox(height: 8),
-
-          SizedBox(
-            height: 46,
-            child: FilledButton.icon(
-              onPressed: _saveEditedRound,
-              icon: const Icon(Icons.edit),
-              label: const Text(
-                'SAVE EDIT',
-                style: TextStyle(
+                'Double $_round',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppTheme.accent,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: 0.5,
                 ),
               ),
-            ),
-          ),
-        ],
-      ],
-    );
+              const SizedBox(height: 10),
+              const _ScoreHeader(),
+              const SizedBox(height: 5),
+              ...List.generate(_playerNames.length, (index) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 5),
+                  child: _ScoreRow(
+                    playerIndex: index,
+                    playerName: _playerNames[index],
+                    total: _totals[index],
+                    controller: _roundControllers[index],
+                    focusNode: _focusNodes[index],
+                    isActive: _activePlayerIndex == index,
+                    isLast: index == _playerNames.length - 1,
+                    autofocus: index == 0,
+                    onChanged: (value) => _handleScoreChanged(index, value),
+                    onSubmitted: () => _handleSubmitted(index),
+                  ),
+                );
+              }),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: _canUndoLastRound ? _confirmUndoLastRound : null,
+                  icon: const Icon(Icons.undo_rounded),
+                  label: const Text(
+                    'UNDO LAST ROUND',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              SizedBox(
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: _rounds.isEmpty
+                      ? null
+                      : () async {
+                          final selectedRound = await Navigator.of(context)
+                              .push<int>(
+                                MaterialPageRoute(
+                                  builder: (_) => RoundHistoryScreen(
+                                    playerNames: List<String>.from(
+                                      _playerNames,
+                                    ),
+                                    rounds: List<RoundResult>.from(_rounds),
+                                  ),
+                                ),
+                              );
+
+                          if (selectedRound == null) return;
+                          final roundToEdit = _rounds.firstWhere(
+                            (roundResult) => roundResult.round == selectedRound,
+                          );
+
+                          _currentRoundBackup = _roundControllers
+                              .map((controller) => controller.text)
+                              .toList();
+
+                          setState(() {
+                            _editingRound = selectedRound;
+                          });
+                          for (
+                            var index = 0;
+                            index < _roundControllers.length &&
+                                index < roundToEdit.scores.length;
+                            index++
+                          ) {
+                            _roundControllers[index].text = roundToEdit
+                                .scores[index]
+                                .toString();
+                          }
+                          if (!context.mounted) return;
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Round $selectedRound: ${roundToEdit.scores.join(', ')}',
+                              ),
+                            ),
+                          );
+                        },
+
+                  icon: const Icon(Icons.history),
+                  label: const Text(
+                    'ROUND HISTORY',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              SizedBox(
+                height: 46,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF43A047),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: (_savingRound || _editingRound != null)
+                      ? null
+                      : _saveRound,
+                  icon: _savingRound
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: Text(
+                    _savingRound
+                        ? 'Saving...'
+                        : _round == 0
+                        ? 'FINISH GAME'
+                        : 'SAVE ROUND',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              SizedBox(
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed:
+                      (_savingRound || _editingRound != null || _rounds.isEmpty)
+                      ? null
+                      : _confirmEndGame,
+                  icon: const Icon(Icons.stop_circle_outlined),
+                  label: const Text(
+                    'END GAME',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+
+              if (_editingRound != null) ...[
+                const SizedBox(height: 8),
+
+                SizedBox(
+                  height: 46,
+                  child: FilledButton.icon(
+                    onPressed: _saveEditedRound,
+                    icon: const Icon(Icons.edit),
+                    label: const Text(
+                      'SAVE EDIT',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ), // ListView
+        ), // Expanded
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: _buildNumberPad(),
+        ),
+      ], // Column children
+    ); // Column
   }
 
   Widget _buildNumberPad() {
