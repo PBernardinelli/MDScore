@@ -168,10 +168,19 @@ class _ScoreScreenState extends State<ScoreScreen> {
 
     final controller = _roundControllers[index];
     final current = controller.text;
+    final selection = controller.selection;
 
-    if (current.length >= 3) return;
+    String newText;
 
-    controller.text = '$current$digit';
+    if (selection.isValid && !selection.isCollapsed) {
+      newText = current.replaceRange(selection.start, selection.end, digit);
+    } else {
+      newText = '$current$digit';
+    }
+
+    if (newText.length > 3) return;
+
+    controller.text = newText;
     controller.selection = TextSelection.collapsed(
       offset: controller.text.length,
     );

@@ -51,24 +51,26 @@ class _NewGameScreenState extends State<NewGameScreen> {
                   'MD SCORE',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2,
-                      ),
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Mexican Dominoes Score',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFFFFA000),
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: const Color(0xFFFFA000),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 Text(
                   'Set up the table',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -78,6 +80,7 @@ class _NewGameScreenState extends State<NewGameScreen> {
                 ),
                 const SizedBox(height: 24),
                 TextField(
+                  autofocus: true,
                   controller: _gameNameController,
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
@@ -95,7 +98,11 @@ class _NewGameScreenState extends State<NewGameScreen> {
                       children: [
                         Text(
                           'NUMBER OF PLAYERS',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
                         ),
                         const SizedBox(height: 6),
                         Text(
@@ -129,25 +136,25 @@ class _NewGameScreenState extends State<NewGameScreen> {
                       backgroundColor: const Color(0xFF43A047),
                       foregroundColor: Colors.white,
                     ),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => PlayersScreen(
-                          playerCount: _playerCount,
-                          gameName: _gameNameController.text.trim(),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => PlayersScreen(
+                            playerCount: _playerCount,
+                            gameName: _gameNameController.text.trim(),
+                          ),
                         ),
+                      );
+                    },
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: const Text(
+                      'CONTINUE',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text(
-                    'CONTINUE',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
                     ),
                   ),
-                ),
                 ),
               ],
             ),
