@@ -290,7 +290,9 @@ class _ScoreScreenState extends State<ScoreScreen> {
         round: editedRound,
         scores: List<int>.from(values),
       );
-
+      if (_lastSavedRound == editedRound) {
+        _lastRoundScores = List<int>.from(values);
+      }
       _totals = List<int>.filled(_playerNames.length, 0);
 
       for (final roundResult in _rounds) {
