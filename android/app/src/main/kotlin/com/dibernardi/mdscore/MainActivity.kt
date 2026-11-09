@@ -1,4 +1,4 @@
-package com.example.md_score
+package com.dibernardi.mdscore
 
 import io.flutter.embedding.android.FlutterActivity
 
